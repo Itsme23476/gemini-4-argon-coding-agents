@@ -86,7 +86,26 @@ schtasks /Create /TN "LiteLLM Argon proxy" /SC ONLOGON /TR $cmd /RL LIMITED /F
 
 Remove it with `schtasks /Delete /TN "LiteLLM Argon proxy" /F`.
 
-## 4. WSL instead of native Windows
+## 4. Claude desktop app on Windows
+
+The mechanism is the same as on macOS (README 3.5): the app keeps its third-party connection
+configurations in a config library and reads the applied one at launch. On Windows the app
+builds that folder as `%LOCALAPPDATA%\Claude-3p\configLibrary\` (the Windows branch of the same
+code path that gives `~/Library/Application Support/Claude-3p/configLibrary` on macOS).
+
+- `.\setup.ps1 -ClaudeDesktop` writes `claude\claude-desktop-entry.json` there and applies it.
+  Then quit Claude from the tray icon and reopen it.
+- Or use the Developer → Configure Third-Party Inference screen with the values from README 3.5.
+- Verify with the model picker label "Gemini 4 Argon (Vertex via proxy)" and the proxy log at
+  `%USERPROFILE%\.config\litellm\argon.log`. The app's own log lives under
+  `%APPDATA%\Claude-3p\logs` (or `%LOCALAPPDATA%\Claude-3p\logs`); look for "3P mode active".
+- Revert: `REVERT-argon.txt` in the library folder, or pick the other entry in that screen.
+
+This part has **not** been run on Windows by us. The folder name comes from the app bundle, not
+from a test. If the folder differs on your machine, the screen (Option A in README 3.5) is the
+reliable fallback.
+
+## 5. WSL instead of native Windows
 
 If you prefer to run the CLIs inside WSL2, follow the macOS/Linux README inside WSL. Two notes:
 

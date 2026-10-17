@@ -1,25 +1,57 @@
 # LiteLLM proxy: Gemini 4 Argon on Vertex AI (global) via a Vertex API key.
-# Front: OpenAI /v1/responses (Codex) and Anthropic /v1/messages (Claude Code).
+# Front: OpenAI /v1/responses (Codex) and Anthropic /v1/messages (Claude Code, Claude desktop).
 # Back:  aiplatform.googleapis.com, project __PROJECT__.
-# Start with: ~/.config/litellm/start-argon.sh
+# Start with: ~/.config/litellm/start-argon.sh  (it sets PYTHONPATH so argon_hooks.py loads).
+#
+# Every model_name below is the SAME backend. gemini/ is used on purpose: it is the only LiteLLM
+# path that authenticates with an x-goog-api-key header. With api_base set, the final URL becomes
+# {api_base}/models/gemini-4-argon:generateContent, i.e. the Vertex global endpoint.
+#
+# The Claude-shaped names exist because the Claude desktop app deletes any model ID that does not
+# look like an Anthropic one, and Claude Code sessions ask for these names by default. Entries are
+# written out in full rather than with YAML anchors so LiteLLM never shares one params object
+# between deployments.
 model_list:
   - model_name: gemini-4-argon
     litellm_params:
-      # gemini/ on purpose: it is the only LiteLLM path that authenticates with an
-      # x-goog-api-key header. With api_base set, the final URL becomes
-      # {api_base}/models/gemini-4-argon:generateContent = the Vertex global endpoint.
+      model: gemini/gemini-4-argon
+      api_base: https://aiplatform.googleapis.com/v1/projects/__PROJECT__/locations/global/publishers/google
+      api_key: os.environ/VERTEX_API_KEY
+  - model_name: claude-opus-4-8
+    litellm_params:
+      model: gemini/gemini-4-argon
+      api_base: https://aiplatform.googleapis.com/v1/projects/__PROJECT__/locations/global/publishers/google
+      api_key: os.environ/VERTEX_API_KEY
+  - model_name: claude-sonnet-4-6
+    litellm_params:
+      model: gemini/gemini-4-argon
+      api_base: https://aiplatform.googleapis.com/v1/projects/__PROJECT__/locations/global/publishers/google
+      api_key: os.environ/VERTEX_API_KEY
+  - model_name: claude-sonnet-4-5
+    litellm_params:
+      model: gemini/gemini-4-argon
+      api_base: https://aiplatform.googleapis.com/v1/projects/__PROJECT__/locations/global/publishers/google
+      api_key: os.environ/VERTEX_API_KEY
+  - model_name: claude-haiku-4-5
+    litellm_params:
+      model: gemini/gemini-4-argon
+      api_base: https://aiplatform.googleapis.com/v1/projects/__PROJECT__/locations/global/publishers/google
+      api_key: os.environ/VERTEX_API_KEY
+  - model_name: claude-fable-5-1
+    litellm_params:
       model: gemini/gemini-4-argon
       api_base: https://aiplatform.googleapis.com/v1/projects/__PROJECT__/locations/global/publishers/google
       api_key: os.environ/VERTEX_API_KEY
 
 litellm_settings:
+  callbacks: argon_hooks.proxy_handler_instance  # strips cache_control, fixes count_tokens (see argon_hooks.py)
   drop_params: true        # Argon ignores temperature/top_p/top_k; drop anything unsupported
   modify_params: true      # let LiteLLM repair tool_use/tool_result pairing from Claude Code
 
 router_settings:
   disable_cooldowns: true  # single upstream: a transient error must not 429 the next minute
 
-# No master key: the proxy binds to 127.0.0.1 only and accepts any bearer, because
-# Codex desktop sends its ChatGPT token when requires_openai_auth = true.
+# No master key: the proxy binds to 127.0.0.1 only and accepts any bearer, because Codex desktop
+# sends its ChatGPT token when requires_openai_auth = true and Claude desktop sends a dummy key.
 general_settings:
   dangerously_permit_weak_or_unset_master_key: true

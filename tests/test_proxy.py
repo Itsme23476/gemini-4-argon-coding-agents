@@ -3,9 +3,8 @@
 Run:  uv run --python 3.12 --no-project tests/test_proxy.py
 Needs only the standard library. Exits non-zero if a required check fails.
 
-Checks: Anthropic /v1/messages (simple, tool round-trip, streaming) and
+Checks: Anthropic /v1/messages (simple, tool round-trip, streaming, count_tokens > 0) and
 OpenAI /v1/responses (Codex-style request fields, tool round-trip, streaming).
-count_tokens is reported but not required (it 404s through the gemini/ provider; cosmetic).
 """
 import json, sys, urllib.request
 
@@ -72,9 +71,10 @@ st, raw = call("/v1/messages", {"model": MODEL, "max_tokens": 64, "stream": True
                                  "messages": [{"role": "user", "content": "Reply with the single word OK."}]}, stream=True)
 check("messages: streaming", st == 200 and "message_stop" in raw and "content_block_delta" in raw, f"status={st}")
 
-st, r = call("/v1/messages/count_tokens", {"model": MODEL, "messages": [{"role": "user", "content": "hello there"}]})
-check("messages: count_tokens (optional)", st == 200 and isinstance(r.get("input_tokens"), int),
-      f"status={st}", required=False)
+st, r = call("/v1/messages/count_tokens", {"model": MODEL, "system": "You are helpful.",
+                                            "messages": [{"role": "user", "content": "hello there, count these tokens"}]})
+check("messages: count_tokens", st == 200 and isinstance(r.get("input_tokens"), int) and r["input_tokens"] > 0,
+      f"status={st} input_tokens={r.get('input_tokens') if st == 200 else r}")
 
 # ---------------- OpenAI Responses (Codex) ----------------
 codex_fields = {"store": False, "stream": False, "include": ["reasoning.encrypted_content"],

@@ -5,4 +5,5 @@ set -e
 D="$HOME/.config/litellm"
 export VERTEX_API_KEY="$(cat "$D/vertex-api-key")"
 export LITELLM_TELEMETRY=False
+export PYTHONPATH="$D${PYTHONPATH:+:$PYTHONPATH}"   # so litellm_settings.callbacks finds argon_hooks.py
 exec "$HOME/.local/bin/litellm" --config "$D/argon.yaml" --host 127.0.0.1 --port 4000 "$@"

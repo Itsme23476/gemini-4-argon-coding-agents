@@ -1,0 +1,13 @@
+{
+  "inferenceProvider": "gateway",
+  "inferenceGatewayBaseUrl": "http://127.0.0.1:4000",
+  "inferenceCredentialKind": "static",
+  "inferenceGatewayApiKey": "local-proxy",
+  "inferenceGatewayAuthScheme": "bearer",
+  "modelDiscoveryEnabled": false,
+  "disableDeploymentModeChooser": true,
+  "inferenceModels": [
+    { "name": "claude-opus-4-8", "labelOverride": "Gemini 4 Argon (Vertex via proxy)" },
+    { "name": "claude-sonnet-4-6", "labelOverride": "Gemini 4 Argon, 2nd slot (same model)" }
+  ]
+}

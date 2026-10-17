@@ -1,22 +1,26 @@
 #!/usr/bin/env bash
-# setup.sh — Gemini 4 Argon (Vertex AI) for Codex CLI, Codex desktop and Claude Code CLI
-# through a local LiteLLM proxy. Idempotent: run it again any time.
+# setup.sh — Gemini 4 Argon (Vertex AI) for Codex CLI, Codex desktop, Claude Code CLI and
+# (opt-in) the Claude desktop app, through a local LiteLLM proxy. Idempotent: run it again any time.
 #
 #   VERTEX_PROJECT=<gcp-project-id> VERTEX_API_KEY='AQ....' ./setup.sh
 #
 # Options:
-#   --files-only   write/patch files only (no install, no proxy start, no tests, no app relaunch)
-#   -h, --help     this text
+#   --claude-desktop  also write and apply the Claude desktop third-party configuration
+#                     (switches the whole app to the gateway on its next launch; see README 3.5)
+#   --files-only      write/patch files only (no install, no proxy start, no tests, no app relaunch)
+#   -h, --help        this text
 #
 # Everything it touches: ~/.config/litellm/*, ~/.codex/config.toml, ~/.claude/settings.json, ~/.zshrc
+# and, with --claude-desktop, ~/Library/Application Support/Claude-3p/configLibrary/.
 # Backups: <file>.bak-argon-<timestamp> next to each patched file.
 set -euo pipefail
 
-FILES_ONLY=0
+FILES_ONLY=0; CLAUDE_DESKTOP=0
 for a in "$@"; do
   case "$a" in
     --files-only) FILES_ONLY=1 ;;
-    -h|--help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --claude-desktop) CLAUDE_DESKTOP=1 ;;
+    -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $a" >&2; exit 2 ;;
   esac
 done
@@ -72,6 +76,7 @@ fi
 chmod 600 "$CFG/vertex-api-key"
 sed "s#__PROJECT__#$VERTEX_PROJECT#g" "$REPO_DIR/proxy/argon.yaml.template" > "$CFG/argon.yaml"
 cp "$REPO_DIR/proxy/start-argon.sh" "$CFG/start-argon.sh"; chmod +x "$CFG/start-argon.sh"
+cp "$REPO_DIR/proxy/argon_hooks.py" "$CFG/argon_hooks.py"   # cache_control strip + count_tokens fix
 
 # ---------------------------------------------------------------- 3. Codex config
 CODEX_CFG="$HOME/.codex/config.toml"
@@ -93,6 +98,13 @@ if grep -q '^claude-argon()' "$ZSHRC"; then
 else
   log "adding claude-argon function to $ZSHRC"
   { printf '\n'; cat "$REPO_DIR/claude/claude-argon.zsh"; } >> "$ZSHRC"
+fi
+
+# ---------------------------------------------------------------- 4b. Claude desktop app (opt-in)
+if [ "$CLAUDE_DESKTOP" = 1 ]; then
+  log "writing and applying the Claude desktop third-party configuration"
+  py "$REPO_DIR/scripts/patch_claude_desktop.py" "$REPO_DIR/claude/claude-desktop-entry.json" --apply
+  warn "Claude desktop will be on the gateway (Argon) for every chat after its next launch: quit it completely and reopen."
 fi
 
 if [ "$FILES_ONLY" = 1 ]; then log "files written (--files-only). Done."; exit 0; fi
@@ -125,5 +137,6 @@ Done. Try it:
   codex exec --skip-git-repo-check "List the files in this directory and count them."
   source ~/.zshrc && claude-argon -p "List the files in this directory and count them."
   Codex desktop: Codex tab -> model shows "Custom" -> new chat -> send anything.
+  Claude desktop (only with --claude-desktop): Cmd-Q Claude, reopen, the model picker shows "Gemini 4 Argon".
 Proxy log: $CFG/argon.log      Stop proxy: pkill -f argon.yaml      Start again: $CFG/start-argon.sh &
 EOF

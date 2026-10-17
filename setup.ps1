@@ -6,8 +6,9 @@
 .USAGE
   $env:VERTEX_PROJECT = "your-project-id"
   $env:VERTEX_API_KEY = "AQ.your-key"
-  .\setup.ps1              # full setup: install, files, proxy, tests
-  .\setup.ps1 -FilesOnly   # write/patch files only
+  .\setup.ps1                 # full setup: install, files, proxy, tests
+  .\setup.ps1 -FilesOnly      # write/patch files only
+  .\setup.ps1 -ClaudeDesktop  # also write and apply the Claude desktop configuration (untested on Windows)
 
   If scripts are blocked:  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
@@ -17,7 +18,7 @@
   The patch logic is the same Python used by setup.sh (scripts\*.py), run through uv.
 #>
 [CmdletBinding()]
-param([switch]$FilesOnly)
+param([switch]$FilesOnly, [switch]$ClaudeDesktop)
 $ErrorActionPreference = "Stop"
 
 $RepoDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -85,6 +86,7 @@ if ($Key) {
 $yaml = (Get-Content (Join-Path $RepoDir "proxy\argon.yaml.template") -Raw).Replace("__PROJECT__", $Project)
 WriteNoBom (Join-Path $Cfg "argon.yaml") $yaml
 Copy-Item (Join-Path $RepoDir "proxy\start-argon.ps1") (Join-Path $Cfg "start-argon.ps1") -Force
+Copy-Item (Join-Path $RepoDir "proxy\argon_hooks.py") (Join-Path $Cfg "argon_hooks.py") -Force   # cache_control strip + count_tokens fix
 
 # ---------------------------------------------------------------- 3. Codex config
 $CodexDir = Join-Path $HOME ".codex"; $CodexCfg = Join-Path $CodexDir "config.toml"
@@ -108,6 +110,13 @@ if (Select-String -Path $ProfilePath -Pattern '^function claude-argon' -Quiet) {
 } else {
   Log "adding claude-argon function to $ProfilePath"
   Add-Content -Path $ProfilePath -Value ("`n" + (Get-Content (Join-Path $RepoDir "claude\claude-argon.ps1") -Raw))
+}
+
+# ---------------------------------------------------------------- 4b. Claude desktop app (opt-in)
+if ($ClaudeDesktop) {
+  Log "writing and applying the Claude desktop third-party configuration (library under %LOCALAPPDATA%\Claude-3p)"
+  Py (Join-Path $RepoDir "scripts\patch_claude_desktop.py") (Join-Path $RepoDir "claude\claude-desktop-entry.json") --apply
+  Warn "Claude desktop will be on the gateway (Argon) for every chat after its next launch: quit it from the tray icon and reopen."
 }
 
 if ($FilesOnly) { Log "files written (-FilesOnly). Done."; exit 0 }
