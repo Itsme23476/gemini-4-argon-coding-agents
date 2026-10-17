@@ -1,0 +1,12 @@
+{
+  "modelPicker": {
+    "options": [
+      {
+        "model": "gemini-4-argon",
+        "label": "Gemini 4 Argon (Vertex via LiteLLM)",
+        "description": "Needs the local proxy: ~/.config/litellm/start-argon.sh, then run claude-argon",
+        "behavesAs": "claude-opus-4-8"
+      }
+    ]
+  }
+}

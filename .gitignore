@@ -1,0 +1,7 @@
+# never commit keys or generated local config
+vertex-api-key
+argon-master-key
+*.key
+*.log
+.env
+.DS_Store

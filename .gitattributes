@@ -1,0 +1,4 @@
+# keep LF everywhere so config files written from this repo stay valid on Windows
+* text=auto eol=lf
+*.ps1 text eol=lf
+*.sh  text eol=lf

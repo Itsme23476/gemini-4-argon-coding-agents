@@ -1,0 +1,13 @@
+# --- Put these two lines at the VERY TOP of ~/.codex/config.toml ---------------------
+# (TOML: top-level keys must come before any [table]. The desktop app ignores profiles.)
+model = "gemini-4-argon"
+model_provider = "litellm"
+
+# --- Put this block anywhere below -----------------------------------------------------
+# Gemini 4 Argon on Vertex AI via local LiteLLM proxy (~/.config/litellm/start-argon.sh)
+[model_providers.litellm]
+name = "LiteLLM (Gemini 4 Argon on Vertex)"
+base_url = "http://127.0.0.1:4000/v1"
+wire_api = "responses"          # the only wire_api Codex still supports
+supports_websockets = false
+requires_openai_auth = true     # makes the desktop app start threads; do NOT add an [auth] block or env_key
